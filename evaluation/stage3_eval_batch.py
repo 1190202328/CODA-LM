@@ -163,7 +163,10 @@ class GPTBatcher:
         message_chunks = list(self.chunk_list(message_list, num_workers))
         try:
             for chunk in tqdm(message_chunks, desc="Processing messages"):
-                future_to_message = {executor.submit(self.get_attitude, message): message for message in chunk}
+                future_to_message = {}
+                for message in tqdm(chunk):
+                    time.sleep(1)
+                    future_to_message[executor.submit(self.get_attitude, message)] = message
                 for _ in range(retry_attempts):
                     done, not_done = wait(future_to_message.keys(), timeout=timeout_duration)
                     for future in not_done:
