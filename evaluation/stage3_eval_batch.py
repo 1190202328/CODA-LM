@@ -1,12 +1,13 @@
-from openai import OpenAI
-from concurrent.futures import ThreadPoolExecutor, wait
-from functools import partial
-from tqdm import tqdm
-import time
-import os
-import json
 import argparse
+import json
+import os
+import time
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, wait
+
+from openai import OpenAI
+from tqdm import tqdm
+
 
 class RegionEval(object):
 
@@ -19,7 +20,7 @@ class RegionEval(object):
         # import pdb; pdb.set_trace()
         for each in self.gt_data.keys():
             assert len(self.gt_data[each]) == len(self.predict_data[each])
-    
+
     def load_predict(self, prediction_path):
         answers = [json.loads(q.strip()) for q in open(os.path.expanduser(prediction_path), "r", encoding='utf-8')]
         answers.sort(key=lambda element: element['question_id'])
@@ -29,7 +30,7 @@ class RegionEval(object):
                 "question": line_data["question"],
                 "answer": line_data["answer"]
             })
-    
+
     def load_gt(self, reference_path):
         gt_list = sorted([each for each in os.listdir(reference_path) if each.endswith(".json")])
         for json_name in gt_list:
@@ -41,20 +42,23 @@ class RegionEval(object):
 
                 self.gt_data[new_label_name].append({
                     'image_name': f"{json_name.split('.')[0]}_object_{object_id}.jpg",
-                    'box_type': 'xywh', # top xy
+                    'box_type': 'xywh',  # top xy
                     'bbox': object_data['box'],
                     'answer': object_data['description and explanation']
                 })
-            
+
     def convert_label(self, category_name):
         label_dict = {
-            "vehicle": ["car", "truck", "tram", "tricycle","bus", "trailer", "construction_vehicle", "recreational_vehicle"],
+            "vehicle": ["car", "truck", "tram", "tricycle", "bus", "trailer", "construction_vehicle",
+                        "recreational_vehicle"],
             "vru": ["pedestrian", "cyclist", "bicycle", "moped", "motorcycle", "stroller", "wheelchair", "cart"],
             "traffic_sign": ["warning_sign", "traffic_sign"],
             "traffic_light": ["traffic_light"],
-            "traffic_cone": ["traffic_cone"], 
+            "traffic_cone": ["traffic_cone"],
             "barrier": ["barrier", "bollard"],
-            "miscellaneous": ["dog", "cat", "sentry_box", "traffic_box", "traffic_island", "debris", "suitcace", "dustbin", "concrete_block", "machinery", "chair", "phone_booth", "basket", "cardboard", "carton", "garbage", "garbage_bag", "plastic_bag", "stone", "tire", "misc"],
+            "miscellaneous": ["dog", "cat", "sentry_box", "traffic_box", "traffic_island", "debris", "suitcace",
+                              "dustbin", "concrete_block", "machinery", "chair", "phone_booth", "basket", "cardboard",
+                              "carton", "garbage", "garbage_bag", "plastic_bag", "stone", "tire", "misc"],
         }
         self.label_info = {
             "vehicle": 0,
@@ -68,10 +72,10 @@ class RegionEval(object):
         for new_name, label_info in label_dict.items():
             if category_name in label_info:
                 return new_name
-    
+
     def get_class(self):
         return self.label_info
-    
+
     def create_messages(self, message):
         ret = []
         # system prompt
@@ -83,12 +87,12 @@ class RegionEval(object):
         template = "[The Start of Reference Text]\n{}\n[The End of Reference Text]\n\n[The Start of Prediction Text]\n{}\n[The End of Prediction Text]"
 
         ret.append({
-            "role": "user", 
+            "role": "user",
             "content": template.format(message["reference"], message["prediction"])
         })
 
         return ret
-    
+
     def get_class_messages(self, label_name):
         results = []
         txt_names = []
@@ -101,8 +105,9 @@ class RegionEval(object):
             message["reference"] = ref["answer"]
             results.append(self.create_messages(message))
             txt_names.append(f"{ref['image_name'].split('.')[0]}.txt")
-            
+
         return results, txt_names
+
 
 class GPTBatcher:
     """
@@ -118,24 +123,24 @@ class GPTBatcher:
         retry_attempts (int, optional): How many times to retry a failed request. Default is 2.
     """
 
-    def __init__(self, 
-                 api_key, 
-                 model_name="gpt-3.5-turbo-0125", 
-                 system_prompt="", 
+    def __init__(self,
+                 api_key,
+                 model_name="gpt-3.5-turbo-0125",
+                 system_prompt="",
                  temperature=0,
                  num_workers=64,
                  timeout_duration=60,
                  retry_attempts=2,
                  api_base_url=None):
-        
-        self.client = OpenAI(api_key=api_key, base_url = api_base_url)
+
+        self.client = OpenAI(api_key=api_key, base_url=api_base_url)
         self.model_name = model_name
         self.system_prompt = system_prompt
         self.temperature = temperature
         self.num_workers = num_workers
         self.timeout_duration = timeout_duration
         self.retry_attempts = retry_attempts
-        self.miss_index =[]
+        self.miss_index = []
         if api_base_url:
             self.client.base_url = api_base_url
 
@@ -158,14 +163,14 @@ class GPTBatcher:
         num_workers = self.num_workers
         timeout_duration = self.timeout_duration
         retry_attempts = self.retry_attempts
-    
+
         executor = ThreadPoolExecutor(max_workers=num_workers)
         message_chunks = list(self.chunk_list(message_list, num_workers))
         try:
             for chunk in tqdm(message_chunks, desc="Processing messages"):
                 future_to_message = {}
                 for message in tqdm(chunk):
-                    time.sleep(1)
+                    time.sleep(time_gap)
                     future_to_message[executor.submit(self.get_attitude, message)] = message
                 for _ in range(retry_attempts):
                     done, not_done = wait(future_to_message.keys(), timeout=timeout_duration)
@@ -174,14 +179,15 @@ class GPTBatcher:
                     new_list.extend(future.result() for future in done if future.done())
                     if len(not_done) == 0:
                         break
-                    future_to_message = {executor.submit(self.get_attitude, future_to_message[future]): future for future in not_done}
+                    future_to_message = {executor.submit(self.get_attitude, future_to_message[future]): future for
+                                         future in not_done}
         except Exception as e:
             print(f"Error occurred: {e}")
         finally:
             executor.shutdown(wait=False)
             return new_list
 
-    def complete_attitude_list(self,attitude_list, max_length):
+    def complete_attitude_list(self, attitude_list, max_length):
         completed_list = []
         current_index = 0
         for item in attitude_list:
@@ -213,13 +219,13 @@ class GPTBatcher:
         attitude_list = self.complete_attitude_list(attitude_list, max_length)
         attitude_list = [x[1] for x in attitude_list]
         return attitude_list
-    
+
     def get_miss_index(self):
         return self.miss_index
 
 
 if __name__ == "__main__":
-  
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--reference_path", type=str, default="ann")
     parser.add_argument("--prediction_path", type=str, default="prediction/xx.jsonl")
@@ -229,32 +235,39 @@ if __name__ == "__main__":
     parser.add_argument("--api_key", type=str, default=None)
     parser.add_argument("--api_base_url", type=str, default=None)
     parser.add_argument("--retry_attempts", type=int, default=10)
-    
     args = parser.parse_args()
+
+    if args.model_name.find('gpt-3.5') != -1:
+        time_gap = 1
+    elif args.model_name.find('gpt-4o') != -1:
+        time_gap = 2
+    else:
+        raise Exception
+
     os.makedirs(args.save_path, exist_ok=True)
     os.makedirs(os.path.join(args.save_path, "gpt_result"), exist_ok=True)
     region_eval = RegionEval(args.reference_path, args.prediction_path)
     batcher = GPTBatcher(
-        api_key=args.api_key, 
-        model_name=args.model_name, 
+        api_key=args.api_key,
+        model_name=args.model_name,
         num_workers=args.num_workers,
         retry_attempts=args.retry_attempts,
         api_base_url=args.api_base_url)
-    
+
     all_score = []
     label_info = region_eval.get_class()
     for label_name in tqdm(label_info.keys()):
         cls_score = []
-        
+
         rets, txt_names = region_eval.get_class_messages(label_name)
         results = batcher.handle_message_list(rets)
-        
+
         for idx, txt_name in tqdm(enumerate(txt_names)):
             output = results[idx]
             if output == None:
                 continue
                 print(f"Missing {txt_name} output")
-                
+
             try:
                 cls_score.append(int(output.split("Rating: [[")[1].split("]]")[0]))
             except:
@@ -265,7 +278,7 @@ if __name__ == "__main__":
                         cls_score.append(int(output.split("[[")[1].split("]]")[0]))
                     except:
                         print(f"Missing extract score from {txt_name}")
-                        
+
             with open(os.path.join(args.save_path, "gpt_result", txt_name), "w") as f:
                 f.write(output)
 
@@ -278,8 +291,8 @@ if __name__ == "__main__":
             print(f"Label: {label_name}, GPT-Score: 0.0")
         else:
             print(f"Label: {label_name}, GPT-Score: {sum(cls_score) / len(cls_score)}")
-        
+
         all_score += cls_score
-    print(f"Stage3_score: {sum(all_score)/len(all_score)}")
+    print(f"Stage3_score: {sum(all_score) / len(all_score)}")
     with open(os.path.join(args.save_path, "all_score.txt"), "w", encoding='utf-8') as f:
-        f.write(f"Stage3_score: {sum(all_score)/len(all_score)}")
+        f.write(f"Stage3_score: {sum(all_score) / len(all_score)}")
