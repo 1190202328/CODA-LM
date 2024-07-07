@@ -19,7 +19,10 @@ if __name__ == '__main__':
     ########################
     ann_root = os.path.join(args.coda_root, args.codalm_ann_name)
     for split in os.listdir(ann_root):
-        assert split in ['Train', 'Val', 'Test', 'Mini']
+        # assert split in ['Train', 'Val', 'Test', 'Mini']
+        if split not in ['Train', 'Val', 'Test', 'NEW_Mini']:
+            continue
+
         split_root = os.path.join(ann_root, split)
         json_list = sorted([each for each in os.listdir(split_root) if each.endswith('.json')])
 
@@ -88,6 +91,7 @@ if __name__ == '__main__':
                 )
                 if split != 'Test':
                     stage3_data['answer'] = value['description and explanation']
+                    stage3_data['bbox'] = value['box']
                 stage3_all_data.append(stage3_data)
         
         ########################
