@@ -4,7 +4,7 @@ import numpy as np
 import json
 import argparse
 from tqdm import tqdm
-    
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--coda_root", type=str, default="./")
@@ -13,7 +13,7 @@ if __name__ == '__main__':
 
     # user notice for directory structure
     print("=======================\nBefore started, please make sure your directory has been organized as in https://github.com/DLUT-LYZ/CODA-LM?tab=readme-ov-file#data-preparation\n=======================\n")
-    
+
     ########################
     # Start pre-processing
     ########################
@@ -73,7 +73,7 @@ if __name__ == '__main__':
                 output_root = os.path.join(args.coda_root, img_dir, 'images_w_boxes')
                 output_path = os.path.join(output_root, "{}_object_{}.jpg".format(json_name.split("_")[1][:-5], key))
                 os.makedirs(output_root, exist_ok=True)
-                
+
                 # prepare images
                 if not os.path.exists(output_path):
                     img = Image.open(os.path.join(args.coda_root, img_dir, 'images', img_name))
@@ -81,7 +81,7 @@ if __name__ == '__main__':
                     rect = [value['box'][0], value['box'][1], value['box'][0] + value['box'][2], value['box'][1] + value['box'][3]]
                     draw.rectangle(rect, outline="red", width=2)
                     img.save(output_path)
-                
+
                 # prepare annotation
                 stage3_index += 1
                 stage3_data = dict(
@@ -92,8 +92,9 @@ if __name__ == '__main__':
                 if split != 'Test':
                     stage3_data['answer'] = value['description and explanation']
                     stage3_data['bbox'] = value['box']
+                    stage3_data['category_name'] = value['category_name']
                 stage3_all_data.append(stage3_data)
-        
+
         ########################
         # Step 4: Save annotation
         ########################
