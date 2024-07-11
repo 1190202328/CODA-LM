@@ -176,14 +176,10 @@ if __name__ == "__main__":
     parser.add_argument("--api_key", type=str, default=None)
     parser.add_argument("--api_base_url", type=str, default=None)
     parser.add_argument("--retry_attempts", type=int, default=10)
+    parser.add_argument("--time_gap", type=int, default=1)
     args = parser.parse_args()
 
-    if args.model_name.find('gpt-3.5') != -1:
-        time_gap = 1
-    elif args.model_name.find('gpt-4o') != -1:
-        time_gap = 2
-    else:
-        raise Exception
+    time_gap = args.time_gap
 
     os.makedirs(args.save_path, exist_ok=True)
     json_list = sorted([each for each in os.listdir(args.reference_path) if each.endswith(".json")])
