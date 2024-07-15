@@ -89,9 +89,9 @@ if __name__ == '__main__':
                     image=os.path.join(img_dir, 'images_w_boxes', "{}_object_{}.jpg".format(json_name.split("_")[1][:-5], key)),
                     question="Please describe the object inside the red rectangle in the image and explain why it affect ego car driving."
                 )
+                stage3_data['bbox'] = value['box']
                 if split != 'Test':
                     stage3_data['answer'] = value['description and explanation']
-                    stage3_data['bbox'] = value['box']
                     stage3_data['category_name'] = value['category_name']
                 stage3_all_data.append(stage3_data)
 
