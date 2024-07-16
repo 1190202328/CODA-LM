@@ -1,8 +1,8 @@
-from PIL import Image, ImageDraw
-import os
-import numpy as np
-import json
 import argparse
+import json
+import os
+
+from PIL import Image, ImageDraw
 from tqdm import tqdm
 
 if __name__ == '__main__':
@@ -12,18 +12,22 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # user notice for directory structure
-    print("=======================\nBefore started, please make sure your directory has been organized as in https://github.com/DLUT-LYZ/CODA-LM?tab=readme-ov-file#data-preparation\n=======================\n")
+    print(
+        "=======================\nBefore started, please make sure your directory has been organized as in https://github.com/DLUT-LYZ/CODA-LM?tab=readme-ov-file#data-preparation\n=======================\n")
 
     ########################
     # Start pre-processing
     ########################
     ann_root = os.path.join(args.coda_root, args.codalm_ann_name)
     for split in os.listdir(ann_root):
-        # assert split in ['Train', 'Val', 'Test', 'Mini']
+        #  ['Train', 'Val', 'Test', 'NEW_Mini']
         if split not in ['Train', 'Val', 'Test', 'NEW_Mini']:
             continue
 
-        split_root = os.path.join(ann_root, split)
+        if split == 'Test':
+            split_root = os.path.join(ann_root, 'Preprocess_data/Test_add_Category')
+        else:
+            split_root = os.path.join(ann_root, split)
         json_list = sorted([each for each in os.listdir(split_root) if each.endswith('.json')])
 
         stage1_index = -1
@@ -57,8 +61,8 @@ if __name__ == '__main__':
             stage2_index += 1
             stage2_data = dict(
                 question_id=stage2_index,
-                    image=os.path.join(img_dir, 'images', img_name),
-                    question="There is an image of traffic captured from the perspective of the ego car. Focus on objects influencing the ego car's driving behavior: vehicles (cars, trucks, buses, etc.), vulnerable road users (pedestrians, cyclists, motorcyclists), traffic signs (no parking, warning, directional, etc.), traffic lights (red, green, yellow), traffic cones, barriers, miscellaneous(debris, dustbin, animals, etc.). You must not discuss any objects beyond the seven categories above. Please provide driving suggestions for the ego car based on the current scene."
+                image=os.path.join(img_dir, 'images', img_name),
+                question="There is an image of traffic captured from the perspective of the ego car. Focus on objects influencing the ego car's driving behavior: vehicles (cars, trucks, buses, etc.), vulnerable road users (pedestrians, cyclists, motorcyclists), traffic signs (no parking, warning, directional, etc.), traffic lights (red, green, yellow), traffic cones, barriers, miscellaneous(debris, dustbin, animals, etc.). You must not discuss any objects beyond the seven categories above. Please provide driving suggestions for the ego car based on the current scene."
             )
             if split != 'Test':
                 stage2_data['answer'] = json_data['driving_suggestion']
@@ -78,7 +82,8 @@ if __name__ == '__main__':
                 if not os.path.exists(output_path):
                     img = Image.open(os.path.join(args.coda_root, img_dir, 'images', img_name))
                     draw = ImageDraw.Draw(img)
-                    rect = [value['box'][0], value['box'][1], value['box'][0] + value['box'][2], value['box'][1] + value['box'][3]]
+                    rect = [value['box'][0], value['box'][1], value['box'][0] + value['box'][2],
+                            value['box'][1] + value['box'][3]]
                     draw.rectangle(rect, outline="red", width=2)
                     img.save(output_path)
 
@@ -86,13 +91,14 @@ if __name__ == '__main__':
                 stage3_index += 1
                 stage3_data = dict(
                     question_id=stage3_index,
-                    image=os.path.join(img_dir, 'images_w_boxes', "{}_object_{}.jpg".format(json_name.split("_")[1][:-5], key)),
+                    image=os.path.join(img_dir, 'images_w_boxes',
+                                       "{}_object_{}.jpg".format(json_name.split("_")[1][:-5], key)),
                     question="Please describe the object inside the red rectangle in the image and explain why it affect ego car driving."
                 )
                 stage3_data['bbox'] = value['box']
+                stage3_data['category_name'] = value['category_name']
                 if split != 'Test':
                     stage3_data['answer'] = value['description and explanation']
-                    stage3_data['category_name'] = value['category_name']
                 stage3_all_data.append(stage3_data)
 
         ########################
