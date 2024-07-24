@@ -93,6 +93,7 @@ class GPTBatcher:
                 model=self.model_name,
                 messages=ask_text,
                 temperature=self.temperature,
+                seed=123456789
             )
             return (index, completion.choices[0].message.content)
         except Exception as e:
