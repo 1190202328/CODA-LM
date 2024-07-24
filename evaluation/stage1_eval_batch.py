@@ -174,7 +174,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_workers", type=int, default=32)
     parser.add_argument("--model_name", type=str, default="gpt-3.5-turbo")
     parser.add_argument("--api_key", type=str, default=None)
-    parser.add_argument("--api_base_url", type=str, default=None)
+    parser.add_argument("--api_base_url", type=str, default='https://api.gptsapi.net/v1')
     parser.add_argument("--retry_attempts", type=int, default=16)
     parser.add_argument("--time_gap", type=int, default=1)
     args = parser.parse_args()
