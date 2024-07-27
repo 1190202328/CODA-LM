@@ -1,5 +1,6 @@
 import argparse
 import json
+import os.path
 import re
 
 
@@ -41,6 +42,9 @@ def analyse(directory, num_samples=10):
                 if perception == 'region_perception':
                     judge_file = f'{judge_file}/gpt_result'
                 judge_file = f'{judge_file}/{image_name}.txt'
+                if not os.path.exists(judge_file):
+                    score_dict[perception][i]['rate'] = 0
+                    continue
                 with open(judge_file, mode='r', encoding='utf-8') as judge_f:
                     judge_txt = judge_f.read()
                 matches = re.findall('\[\[.*\]\]', judge_txt)
