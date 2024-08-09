@@ -17,7 +17,10 @@ def check(input_dir, ref='/Users/didi/Desktop/提交结果备份/ref/results'):
         with open(path, encoding='utf-8', mode='r') as f:
             for j, line in enumerate(f.readlines()):
                 line_json = json.loads(line)
+                assert (line_json['answer'] is not None and len(line_json['answer']) != 0 and line_json[
+                    'answer'] != 'None')
                 ref_json = json.loads(ref_json_lists[i][j])
+                assert line_json['answer'] != ref_json['answer']
                 line_json['answer'] = ref_json['answer']
                 assert line_json == ref_json
     print('done, no problem!')
