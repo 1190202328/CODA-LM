@@ -20,6 +20,8 @@ def check(input_dir, ref='/Users/didi/Desktop/提交结果备份/ref/results'):
                 if not (line_json['answer'] is not None and len(line_json['answer']) != 0 and line_json[
                     'answer'] != 'None'):
                     print(line_json)
+                if not line_json['answer'].endswith('.'):
+                    print(line_json)
                 ref_json = json.loads(ref_json_lists[i][j])
                 assert line_json['answer'] != ref_json['answer']
                 line_json['answer'] = ref_json['answer']
